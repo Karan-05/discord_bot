@@ -1,173 +1,76 @@
-Below is a complete **`README.md`** you can drop straight into the root of the **`discord_guardian_bot`** repository.
-Copy-paste (or save) it as-is; every bracketed link and badge is ready to work once you add the demo assets.
+# Discord Guardian Bot 🛡️
 
-````markdown
-# Discord Guardian Bot 🛡️  
-*AI-powered, real-time toxicity watchdog for Discord servers*
+AI‑powered moderation assistant that **detects toxic messages in real‑time** and
+keeps your community safe.
 
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-yellow.svg)
+![demo gif placeholder](https://user-images.githubusercontent.com/your-demo.gif)
 
 ---
 
-## ✨ Why?
+## ✨ What it does
 
-Small and mid-sized communities rarely have 24 × 7 human moderation.  
-A single hateful or threatening message can ruin the vibe before staff wake up.  
-**Discord Guardian Bot** jumps in instantly: flags toxic content, warns the author, and auto-mutes repeat offenders—while logging everything for review.
+1. Listens to every message in your server.
+2. Sends content to **OpenAI’s moderation endpoint**.
+3. If flagged (*hate, harassment, violence, etc.*):
+   * Replies with a polite warning.
+   * Records the offence count.
+   * After *N* violations, automatically **mutes** (timeout) the user for a configurable duration.
+4. Logs actions in a dedicated `#moderation-log` channel.
 
----
-
-## 🚀 Features
-
-| ✔ | Capability | Notes |
-|---|------------|-------|
-| ⚡ **Real-time scanning** | <1 s latency via Discord Gateway |
-| 🤖 **OpenAI moderation** | Uses `text-moderation-latest` for hate / harassment / violence detection |
-| 🛑 **Gentle escalation** | 1-st & 2-nd strike: polite warning   3-rd strike: configurable timeout |
-| 🗃 **Audit log embeds** | Posts rich embeds to a `#moderation-log` channel |
-| 🔧 **.env-driven config** | Tokens, thresholds, guild/channel IDs, mute length, log level |
-| 📜 **Verbose DEBUG mode** | See every decision & raw OpenAI response for easy debugging |
-| 🐳 **Docker-ready** | One-command deploy anywhere |
+All behaviour (thresholds, mute duration, guild restriction) is controlled via
+environment variables.
 
 ---
 
-## 🏗 Architecture
+## 🏗️ Tech stack
 
-```text
-Discord Gateway (WebSocket events)
-            │
-            ▼
-   discord.py client  ⇢  OpenAI Moderation API
-            │                    │
-            │                    ▼
-            │           JSON verdict  (hate / violence / etc.)
-            ▼
- Guardian bot logic
-   • warn user
-   • count strikes → timeout
-   • log embed → #moderation-log
-   • persist strikes in violations.json
-````
+| Layer | Choice | Rationale |
+|-------|--------|-----------|
+| Discord client | `discord.py` 2.x | Robust, slash‑command ready |
+| AI moderation | `omni-moderation-latest` | Best coverage for hateful/violent content |
+| Config | `.env` + `python-dotenv` | Simple secrets management |
+| Persistence | `violations.json` | Lightweight for hack‑project scope |
+| Container | Dockerfile | Easy deploy on Fly.io, Railway, etc. |
 
 ---
 
-## 📦 Requirements
+## 🚀 Quickstart
 
-* **Discord** bot application with **Message Content Intent** enabled
-* **OpenAI** account with API key and active billing / remaining credit
-* Python 3.11+ **or** Docker (to run container)
+```bash
+git clone <your-fork> discord_guardian_bot
+cd discord_guardian_bot
+cp .env.example .env   # fill tokens and IDs
 
----
-
-## 🛠️ Setup
-
-1. **Clone & install**
-
-   ```bash
-   git clone https://github.com/yourname/discord-guardian-bot.git
-   cd discord-guardian-bot
-   python -m venv .venv && source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. **Create a bot in the Discord Developer Portal**
-
-   * Enable **Message Content Intent** & **Server Members Intent**.
-   * Copy the bot token.
-
-3. **Invite the bot**
-   In *OAuth2 → URL Generator*, select **bot** scope and grant:
-   `Read Messages`, `Send Messages`, `Embed Links`, `Manage Messages`, `Timeout Members`.
-   Paste the URL, invite the bot, and (optionally) create `#moderation-log`.
-
-4. **Fill environment variables**
-
-   ```bash
-   cp .env.example .env
-   # then edit .env with your keys & IDs
-   ```
-
-   | Variable            | Description                                 |
-   | ------------------- | ------------------------------------------- |
-   | `DISCORD_BOT_TOKEN` | Bot token from step 2                       |
-   | `OPENAI_API_KEY`    | Your OpenAI key                             |
-   | `GUILD_ID`          | (Optional) server ID to restrict moderation |
-   | `LOG_CHANNEL_ID`    | Channel ID for log embeds                   |
-   | `WARN_THRESHOLD`    | Strikes before mute (default 2)             |
-   | `MUTE_DURATION_MIN` | Timeout length (default 30 min)             |
-   | `LOG_LEVEL`         | `INFO` or `DEBUG`                           |
-
-5. **Run**
-
-   ```bash
-   python bot.py
-   # or:
-   docker build -t guardian-bot .
-   docker run --env-file .env guardian-bot
-   ```
-
----
-
-## 🔎 Testing
-
-Paste any of these strings in a channel the bot can read:
-
-```
-You're such a worthless loser—go crawl back under your rock.
-Say that again and I'll smash your face in.
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python bot.py
 ```
 
-You should see:
-
-* ⚠️ warning reply in-channel
-* embed in `#moderation-log`
-* user timed-out on the N-th strike
-
-> **DEBUG mode** (`LOG_LEVEL=DEBUG`) prints raw moderation responses & every internal step.
+> The bot needs **Message Content Intent** and **Server Members Intent** enabled
+> in the Discord Developer Portal.  
+> Assign a role with *Timeout Members* + *Manage Messages* for full control.
 
 ---
 
-## 📝 Design Choices
+## 〽️ Design notes
 
-* **No database** – a tiny `violations.json` keeps state; perfect for hack-scale.
-* **Polite UX** – always warns before punishing, wording is constructive.
-* **Graceful degradation** – if OpenAI quota is exhausted, bot logs the error and skips moderation (no crashes).
-* **Extensible** – swap in Perspective API or custom models by editing `moderation.py`.
-
----
-
-## 🛣️ Roadmap
-
-* Slash-command dashboard to adjust thresholds live
-* Whisper integration for voice-chat toxicity detection
-* Prometheus exporter → Grafana toxicity heat-map
-* Adaptive mute length (longer for multiple offences over time)
-* Auto-delete flagged messages after warning
+* **Real‑time** — no polling delays; uses WebSocket events.
+* **User privacy** — messages are not stored; only offence counts per user ID.
+* **Graceful** — warns before muting, feels fair.
+* **Extensible** — swap moderation model, add custom rules, or integrate
+  perspective API.
 
 ---
 
-## 📄 License
+## 🛣️ Next steps if I had more time
 
-MIT – do what you want, just keep the notice.
-
----
-
-## 🎥 Demo
-
-> *2-min screen-recording walk-through link goes here (e.g., Loom or YouTube).*
+* **Dashboard** showing violations over time (Grafana + Prometheus).
+* **Customisable rules** via slash commands (e.g., set threshold per channel).
+* **Multilingual support** with Whisper for voice channels.
+* **Appeal system** allowing users to request review of false positives.
 
 ---
 
-Enjoy safer conversations! PRs and feedback welcome 💬
+## 🪪 License
 
-```
-
-**How to use**
-
-1. Save the block above as `README.md`.
-2. Replace placeholders (`yourname`, demo link, etc.).
-3. Commit & push—your repo now has a polished, self-contained read-me for reviewers.
-
-That’s it!
-```
+MIT
